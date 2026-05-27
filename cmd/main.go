@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
 	"os"
@@ -10,15 +11,28 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/GuiCezaF/queue-processor/internal/queue"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
+	"github.com/joho/godotenv"
 )
 
 type sendResponse struct {
 	Msg string `json:"msg"`
 }
 
+func init() {
+
+	err := godotenv.Load()
+
+	if err != nil {
+		log.Fatal("Error loading .env file")
+	}
+}
+
 func main() {
+
+	queue.NewRabbitMQConnection(os.Getenv("RABBITMQ_CONN"))
 
 	r := chi.NewRouter()
 	r.Use(middleware.Logger)
@@ -36,7 +50,25 @@ func main() {
 	r.Get("/ping", ping)
 
 	go func() {
-		log.Fatal(s.ListenAndServe())
+		log.Println("HTTP server running on :8080")
+
+		if err := s.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			log.Fatal(err)
+		}
+	}()
+
+	go func() {
+		err := queue.RabbitMQClient.ConsumeQueue("my_queue", func(msg queue.Message) error {
+
+			fmt.Println("Received message:", msg.Data)
+
+			// TODO: Process message
+
+			return nil
+		})
+		if err != nil {
+			log.Fatal(err)
+		}
 	}()
 
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
