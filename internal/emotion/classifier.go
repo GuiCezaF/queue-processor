@@ -29,7 +29,15 @@ type Classifier struct {
 	session *ort.DynamicAdvancedSession
 }
 
-func NewClassifier(modelPath string) (*Classifier, error) {
+func modelPath() string {
+	if path := os.Getenv("MODEL_PATH"); path != "" {
+		return path
+	}
+
+	return "./assets/models/emotion_model.onnx"
+}
+
+func NewClassifier() (*Classifier, error) {
 	if err := configureSharedLibraryPath(); err != nil {
 		return nil, err
 	}
@@ -39,7 +47,7 @@ func NewClassifier(modelPath string) (*Classifier, error) {
 	}
 
 	session, err := ort.NewDynamicAdvancedSession(
-		modelPath,
+		modelPath(),
 		[]string{"input"},
 		[]string{"logits"},
 		nil,

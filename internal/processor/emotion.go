@@ -49,7 +49,7 @@ func (p *EmotionProcessor) Run() error {
 			return err
 		}
 
-		log.Println("emotion processed:", msg.UserID)
+		log.Printf("emotion processed for user %s : %+v", msg.UserID, response.Emotion)
 		return nil
 	})
 }
