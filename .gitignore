@@ -25,6 +25,11 @@ go.work.sum
 # env file
 .env
 
+# Model artifacts
+assets/models/*
+!assets/models/README.md
+model/
+
 # Editor/IDE
 # .idea/
 # .vscode/

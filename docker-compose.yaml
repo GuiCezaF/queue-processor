@@ -2,6 +2,38 @@ services:
   rabbitmq:
     image: rabbitmq:4-management-alpine
     container_name: rabbitmq
+
     ports:
       - "5672:5672"
       - "15672:15672"
+
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASS}
+
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
+    restart: unless-stopped
+
+  emotion-worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: emotion-worker
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    env_file:
+      - .env
+    environment:
+      RABBITMQ_CONN: amqp://guest:guest@rabbitmq:5672/
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./assets/models:/models:ro
+    restart: unless-stopped

@@ -7,4 +7,9 @@ require (
 	github.com/rabbitmq/amqp091-go v1.11.0
 )
 
-require github.com/joho/godotenv v1.5.1 // indirect
+require github.com/joho/godotenv v1.5.1
+
+require (
+	github.com/yalue/onnxruntime_go v1.30.1 // indirect
+	golang.org/x/image v0.41.0 // indirect
+)
