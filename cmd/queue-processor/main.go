@@ -8,6 +8,7 @@ import (
 	"os/signal"
 	"syscall"
 
+	"github.com/GuiCezaF/queue-processor/internal/db"
 	"github.com/GuiCezaF/queue-processor/internal/emotion"
 	"github.com/GuiCezaF/queue-processor/internal/processor"
 	"github.com/GuiCezaF/queue-processor/internal/rabbitmq"
@@ -24,6 +25,16 @@ func init() {
 func main() {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
+
+	pool, err := db.Init(os.Getenv("POSTGRES_CONN"))
+
+	if err != nil {
+		log.Fatalf("Error creating connection pool: %s", err)
+	}
+
+	defer pool.Close()
+
+	store := db.NewStore(pool)
 
 	server := routes.Init()
 
@@ -42,6 +53,7 @@ func main() {
 	emotionProcessor := processor.NewEmotionProcessor(
 		rabbitClient,
 		classifier,
+		store,
 	)
 
 	go func() {

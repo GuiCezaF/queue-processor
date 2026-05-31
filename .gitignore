@@ -31,5 +31,8 @@ assets/models/*
 model/
 
 # Editor/IDE
-# .idea/
-# .vscode/
+.idea/
+.vscode/
+
+
+req.example.json
