@@ -4,15 +4,17 @@ import (
 	"context"
 	"errors"
 	"log"
+	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
 
-	"github.com/GuiCezaF/queue-processor/internal/db"
+	"github.com/GuiCezaF/queue-processor/internal/config"
 	"github.com/GuiCezaF/queue-processor/internal/emotion"
-	"github.com/GuiCezaF/queue-processor/internal/processor"
+	"github.com/GuiCezaF/queue-processor/internal/httpserver"
 	"github.com/GuiCezaF/queue-processor/internal/rabbitmq"
-	"github.com/GuiCezaF/queue-processor/internal/routes"
+	"github.com/GuiCezaF/queue-processor/internal/storage/postgres"
+	"github.com/GuiCezaF/queue-processor/internal/worker"
 	"github.com/joho/godotenv"
 )
 
@@ -26,19 +28,21 @@ func main() {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
-	pool, err := db.Init(os.Getenv("POSTGRES_CONN"))
-
+	cfg, err := config.Load()
 	if err != nil {
-		log.Fatalf("Error creating connection pool: %s", err)
+		log.Fatal(err)
 	}
 
+	pool, err := postgres.Open(cfg.PostgresConn)
+	if err != nil {
+		log.Fatalf("error creating PostgreSQL pool: %s", err)
+	}
 	defer pool.Close()
 
-	store := db.NewStore(pool)
+	store := postgres.NewStore(pool)
+	server := httpserver.New(cfg.HTTPAddr)
 
-	server := routes.Init()
-
-	rabbitClient, err := rabbitmq.NewClient(os.Getenv("RABBITMQ_CONN"))
+	rabbitClient, err := rabbitmq.NewClient(cfg.RabbitMQConn)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -50,11 +54,19 @@ func main() {
 	}
 	defer classifier.Close()
 
-	emotionProcessor := processor.NewEmotionProcessor(
+	emotionProcessor := worker.NewEmotionProcessor(
 		rabbitClient,
 		classifier,
 		store,
 	)
+
+	go func() {
+		log.Printf("HTTP server running on %s", cfg.HTTPAddr)
+
+		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			log.Fatal(err)
+		}
+	}()
 
 	go func() {
 		if err := emotionProcessor.Run(); err != nil {
@@ -65,5 +77,5 @@ func main() {
 	<-ctx.Done()
 	log.Println("Shutting down gracefully...")
 
-	routes.Cancel(server)
+	httpserver.Shutdown(server)
 }

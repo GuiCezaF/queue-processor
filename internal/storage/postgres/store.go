@@ -1,4 +1,4 @@
-package db
+package postgres
 
 import (
 	"context"
@@ -12,9 +12,7 @@ type Store struct {
 }
 
 func NewStore(pool *pgxpool.Pool) *Store {
-	return &Store{
-		pool: pool,
-	}
+	return &Store{pool: pool}
 }
 
 func (s *Store) CreateEmotion(
@@ -24,7 +22,6 @@ func (s *Store) CreateEmotion(
 	confidence float32,
 	capturedAt time.Time,
 ) error {
-
 	_, err := s.pool.Exec(
 		ctx,
 		`

@@ -1,4 +1,4 @@
-package db
+package postgres
 
 import (
 	"context"
@@ -8,7 +8,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-func Init(dbURL string) (*pgxpool.Pool, error) {
+func Open(dbURL string) (*pgxpool.Pool, error) {
 	cfg, err := pgxpool.ParseConfig(dbURL)
 	if err != nil {
 		return nil, err
@@ -21,10 +21,7 @@ func Init(dbURL string) (*pgxpool.Pool, error) {
 	cfg.HealthCheckPeriod = time.Minute
 	cfg.ConnConfig.ConnectTimeout = 5 * time.Second
 
-	ctx, cancel := context.WithTimeout(
-		context.Background(),
-		10*time.Second,
-	)
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
 	pool, err := pgxpool.NewWithConfig(ctx, cfg)
@@ -37,7 +34,7 @@ func Init(dbURL string) (*pgxpool.Pool, error) {
 		return nil, err
 	}
 
-	if err := runMigrations(ctx, pool); err != nil {
+	if err := migrate(ctx, pool); err != nil {
 		pool.Close()
 		return nil, err
 	}

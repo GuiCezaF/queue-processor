@@ -1,4 +1,4 @@
-package processor
+package worker
 
 import (
 	"context"
@@ -21,11 +21,10 @@ type EmotionStore interface {
 }
 
 type EmotionProcessor struct {
-	queue       *rabbitmq.Client
-	classifier  *emotion.Classifier
-	store       EmotionStore
-	inputQueue  string
-	outputQueue string
+	queue      *rabbitmq.Client
+	classifier *emotion.Classifier
+	store      EmotionStore
+	inputQueue string
 }
 
 func NewEmotionProcessor(
@@ -33,13 +32,11 @@ func NewEmotionProcessor(
 	classifier *emotion.Classifier,
 	store EmotionStore,
 ) *EmotionProcessor {
-
 	return &EmotionProcessor{
-		queue:       queue,
-		classifier:  classifier,
-		store:       store,
-		inputQueue:  "emotion_requests",
-		outputQueue: "emotion_results",
+		queue:      queue,
+		classifier: classifier,
+		store:      store,
+		inputQueue: "emotion_requests",
 	}
 }
 
